@@ -1,9 +1,10 @@
 const AutocompleteComponent = require("../../structure/AutocompleteComponent");
 
 module.exports = new AutocompleteComponent({
-  commandName: ["joinqueue", "submitresult"],
+  commandName: "joinqueue",
   run: async (client, interaction) => {
     const focusedValue = interaction.options.getFocused();
+    console.log(focusedValue);
     const choices = interaction.member.roles.cache
       .filter((role) => !role.managed && role.name !== "@everyone")
       .map((role) => role.name);

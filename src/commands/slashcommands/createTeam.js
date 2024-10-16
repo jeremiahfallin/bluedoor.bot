@@ -9,7 +9,7 @@ module.exports = new ApplicationCommand({
     type: 1,
     options: [
       {
-        name: "team name",
+        name: "team_name",
         description: "The name of the team",
         type: 3, // STRING type
         required: true,
@@ -25,7 +25,7 @@ module.exports = new ApplicationCommand({
    * @param {ChatInputCommandInteraction} interaction
    */
   run: async (client, interaction) => {
-    const teamName = interaction.options.getString("teamname", true); // The 'true' here ensures it's required
+    const teamName = interaction.options.getString("team_name", true); // The 'true' here ensures it's required
 
     // Check if the role already exists
     let role = interaction.guild.roles.cache.find(

@@ -105,22 +105,77 @@ class CommandsHandler {
    * @param {Partial<import('discord.js').RESTOptions>} restOptions
    */
   registerApplicationCommands = async (development, restOptions = null) => {
-    const rest = new REST(
-      restOptions ? restOptions : { version: "10" }
-    ).setToken(this.client.token);
+    const rest = new REST({ version: "9" }).setToken(this.client.token);
 
-    if (development.enabled) {
-      await rest.put(
-        Routes.applicationGuildCommands(
-          this.client.user.id,
-          development.guildId
-        ),
-        { body: this.client.rest_application_commands_array }
+    try {
+      console.log("Started refreshing application (/) commands.");
+
+      // Fetch existing commands
+      let existingCommands;
+      if (development.enabled) {
+        existingCommands = await rest.get(
+          Routes.applicationGuildCommands(
+            this.client.user.id,
+            development.guildId
+          )
+        );
+      } else {
+        existingCommands = await rest.get(
+          Routes.applicationCommands(this.client.user.id)
+        );
+      }
+
+      // Delete commands that no longer exist in your code
+      for (const command of existingCommands) {
+        if (
+          !this.client.rest_application_commands_array.some(
+            (cmd) => cmd.name === command.name
+          )
+        ) {
+          if (development.enabled) {
+            await rest.delete(
+              Routes.applicationGuildCommand(
+                this.client.user.id,
+                development.guildId,
+                command.id
+              )
+            );
+          } else {
+            await rest.delete(
+              Routes.applicationCommand(this.client.user.id, command.id)
+            );
+          }
+          console.log(`Deleted outdated command: ${command.name}`);
+        }
+      }
+
+      // Register new commands
+      let data;
+      if (development.enabled) {
+        console.log(`Registering commands to guild: ${development.guildId}`);
+        data = await rest.put(
+          Routes.applicationGuildCommands(
+            this.client.user.id,
+            development.guildId
+          ),
+          { body: this.client.rest_application_commands_array }
+        );
+      } else {
+        console.log("Registering commands globally.");
+        data = await rest.put(Routes.applicationCommands(this.client.user.id), {
+          body: this.client.rest_application_commands_array,
+        });
+      }
+
+      console.log(
+        `Successfully reloaded ${data.length} application (/) commands.`
       );
-    } else {
-      await rest.put(Routes.applicationCommands(this.client.user.id), {
-        body: this.client.rest_application_commands_array,
-      });
+      console.log(
+        "Registered commands:",
+        data.map((cmd) => cmd.name).join(", ")
+      );
+    } catch (error) {
+      console.error("Error registering commands:", error);
     }
   };
 }
