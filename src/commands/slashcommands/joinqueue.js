@@ -1,3 +1,4 @@
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 const { SlashCommandBuilder } = require("@discordjs/builders");
 
 // This would be better stored in a database
@@ -34,9 +35,10 @@ module.exports = {
     // Add the team to the queue
     queue.push({ team: selectedTeam, user: interaction.user.id });
 
-    await interaction.reply(
-      `Your team "${selectedTeam}" has joined the queue!`
-    );
+    await interaction.reply({
+      content: `Your team "${selectedTeam}" has joined the queue!`,
+      ephemeral: true,
+    });
 
     // Check if we can create a match
     if (queue.length >= 2) {
@@ -54,7 +56,22 @@ async function createMatch(interaction, team1, team2) {
     reason: "New match created",
   });
 
-  await thread.send(
-    `<@${team1.user}> (Team ${team1.team}) vs <@${team2.user}> (Team ${team2.team})\nYour match has been created! Good luck and have fun!`
+  const userTeam = team1.user === interaction.user.id ? team1 : team2;
+  const otherTeam = team1.user === interaction.user.id ? team2 : team1;
+
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`result_${team1.team}`)
+      .setLabel(`${team1.team} Won`)
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId(`result_${team2.team}`)
+      .setLabel(`${team2.team} Won`)
+      .setStyle(ButtonStyle.Primary)
   );
+
+  await thread.send({
+    content: `<@${interaction.user.id}> (Team ${userTeam.team}) vs <@${otherTeam.user}> (Team ${otherTeam.team})\nYour match has been created! Good luck and have fun!\n\nWhen the match is over, click the button for the winning team:`,
+    components: [row],
+  });
 }
