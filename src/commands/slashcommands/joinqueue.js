@@ -20,12 +20,18 @@ module.exports = {
     ],
   },
   run: async (client, interaction) => {
-    const selectedTeam = interaction.options.getString("team");
+    const selectedTeamId = interaction.options.getString("team");
+    const selectedTeamRole = interaction.guild.roles.cache.get(selectedTeamId);
+
+    if (!selectedTeamRole) {
+      return interaction.reply({
+        content: "Invalid team selected. Please try again.",
+        ephemeral: true,
+      });
+    }
 
     // Check if the user has the role for the selected team
-    if (
-      !interaction.member.roles.cache.some((role) => role.name === selectedTeam)
-    ) {
+    if (!interaction.member.roles.cache.has(selectedTeamId)) {
       return interaction.reply({
         content: "You are not a member of this team!",
         ephemeral: true,
@@ -33,10 +39,10 @@ module.exports = {
     }
 
     // Add the team to the queue
-    queue.push({ team: selectedTeam, user: interaction.user.id });
+    queue.push({ roleId: selectedTeamId, userId: interaction.user.id });
 
     await interaction.reply({
-      content: `Your team "${selectedTeam}" has joined the queue!`,
+      content: `Your team "${selectedTeamRole.name}" has joined the queue!`,
       ephemeral: true,
     });
 
@@ -44,34 +50,37 @@ module.exports = {
     if (queue.length >= 2) {
       const team1 = queue.shift();
       const team2 = queue.shift();
-      await createMatch(interaction, team1, team2);
+      await createMatch(interaction, team1.roleId, team2.roleId);
     }
   },
 };
 
-async function createMatch(interaction, team1, team2) {
+async function createMatch(interaction, team1RoleId, team2RoleId) {
+  const team1Role = await interaction.guild.roles.fetch(team1RoleId);
+  const team2Role = await interaction.guild.roles.fetch(team2RoleId);
+
+  const team1Name = team1Role ? team1Role.name : "Unknown Team";
+  const team2Name = team2Role ? team2Role.name : "Unknown Team";
+
   const thread = await interaction.channel.threads.create({
-    name: `Match: ${team1.team} vs ${team2.team}`,
+    name: `Match: ${team1Name} vs ${team2Name}`,
     autoArchiveDuration: 60,
     reason: "New match created",
   });
 
-  const userTeam = team1.user === interaction.user.id ? team1 : team2;
-  const otherTeam = team1.user === interaction.user.id ? team2 : team1;
-
   const row = new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setCustomId(`result_${team1.team}`)
-      .setLabel(`${team1.team} Won`)
+      .setCustomId(`result_${team1RoleId}`)
+      .setLabel(`${team1Name} Won`)
       .setStyle(ButtonStyle.Primary),
     new ButtonBuilder()
-      .setCustomId(`result_${team2.team}`)
-      .setLabel(`${team2.team} Won`)
+      .setCustomId(`result_${team2RoleId}`)
+      .setLabel(`${team2Name} Won`)
       .setStyle(ButtonStyle.Primary)
   );
 
   await thread.send({
-    content: `<@${interaction.user.id}> (Team ${userTeam.team}) vs <@${otherTeam.user}> (Team ${otherTeam.team})\nYour match has been created! Good luck and have fun!\n\nWhen the match is over, click the button for the winning team:`,
+    content: `<@&${team1RoleId}> vs <@&${team2RoleId}>\nYour match has been created! Good luck and have fun!\n\nWhen the match is over, click the button for the winning team:`,
     components: [row],
   });
 }

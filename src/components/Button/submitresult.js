@@ -17,13 +17,19 @@ module.exports = new Component({
    */
   run: async (client, interaction) => {
     try {
-      const winningTeam = interaction.customId.split("_")[1];
-      const losingTeam = interaction.message.components[0].components
+      const winningRoleId = interaction.customId.split("_")[1];
+      const losingRoleId = interaction.message.components[0].components
         .find((button) => button.customId !== interaction.customId)
-        .label.replace(" Won", "");
+        .customId.split("_")[1];
+
+      const winningRole = await interaction.guild.roles.fetch(winningRoleId);
+      const losingRole = await interaction.guild.roles.fetch(losingRoleId);
+
+      const winningTeamName = winningRole ? winningRole.name : "Unknown Team";
+      const losingTeamName = losingRole ? losingRole.name : "Unknown Team";
 
       // Update leaderboard
-      await updateLeaderboard(interaction.guild, winningTeam, losingTeam);
+      await updateLeaderboard(interaction.guild, winningRoleId, losingRoleId);
 
       // Rebuild the buttons with 'setDisabled(true)' since original components are raw objects
       const updatedComponents = interaction.message.components.map((row) => {
@@ -36,7 +42,7 @@ module.exports = new Component({
 
       // Update the message with the match result and disable the buttons
       await interaction.update({
-        content: `Match result: **${winningTeam}** won against **${losingTeam}**!\nThe leaderboard has been updated.`,
+        content: `Match result: **${winningTeamName}** won against **${losingTeamName}**!\nThe leaderboard has been updated.`,
         components: updatedComponents,
       });
 
@@ -45,7 +51,7 @@ module.exports = new Component({
         interaction.channel.setArchived(true, "Match concluded");
       }, 60000); // 1 minute delay
     } catch (err) {
-      console.log(err);
+      console.error(err);
     }
   },
 }).toJSON();

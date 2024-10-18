@@ -50,9 +50,10 @@ module.exports = new ApplicationCommand({
       // Assign the role to the user
       await interaction.member.roles.add(role);
 
-      await interaction.reply(
-        `Team "${teamName}" has been created and assigned to you!`
-      );
+      await interaction.reply({
+        content: `Team "${teamName}" has been created and assigned to you!`,
+        ephemeral: true,
+      });
     } catch (error) {
       console.error(error);
       await interaction.reply({
