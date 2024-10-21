@@ -1,8 +1,8 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
-const { SlashCommandBuilder } = require("@discordjs/builders");
 
 // This would be better stored in a database
 let queue = [];
+const QUEUE_CHANNEL_ID = "YOUR_CHANNEL_ID_HERE";
 
 module.exports = {
   __type__: 1, // This indicates it's an application (slash) command
