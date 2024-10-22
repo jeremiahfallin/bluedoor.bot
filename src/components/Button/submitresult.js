@@ -21,6 +21,7 @@ module.exports = new Component({
       const losingRoleId = interaction.message.components[0].components
         .find((button) => button.customId !== interaction.customId)
         .customId.split("_")[1];
+      const channelId = await interaction.channel.parentId;
 
       const winningRole = await interaction.guild.roles.fetch(winningRoleId);
       const losingRole = await interaction.guild.roles.fetch(losingRoleId);
@@ -29,7 +30,12 @@ module.exports = new Component({
       const losingTeamName = losingRole ? losingRole.name : "Unknown Team";
 
       // Update leaderboard
-      await updateLeaderboard(interaction.guild, winningRoleId, losingRoleId);
+      await updateLeaderboard(
+        interaction.guild,
+        channelId,
+        winningRoleId,
+        losingRoleId
+      );
 
       // Rebuild the buttons with 'setDisabled(true)' since original components are raw objects
       const updatedComponents = interaction.message.components.map((row) => {

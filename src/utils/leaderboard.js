@@ -1,16 +1,12 @@
-const { QuickYAML } = require("quick-yaml.db");
-const config = require("../config");
+const {
+  getLeaderboard,
+  getLeaderboardChannelId,
+  setLeaderboard,
+} = require("./database");
 
-let leaderboardDB;
-try {
-  leaderboardDB = new QuickYAML(config.database.path);
-} catch (error) {
-  console.error("Failed to initialize leaderboard database:", error);
-}
-
-exports.updateLeaderboard = async (guild, winner, loser) => {
+exports.updateLeaderboard = async (guild, channelId, winner, loser) => {
   // Get existing leaderboard or initialize a new structure
-  let leaderboard = leaderboardDB.get("leaderboard") || {};
+  const leaderboard = getLeaderboard(channelId) || {};
 
   // Ensure both teams have an entry in the leaderboard
   if (!leaderboard[winner]) {
@@ -31,22 +27,22 @@ exports.updateLeaderboard = async (guild, winner, loser) => {
   leaderboard[loser].wins = leaderboard[loser].wins || 0;
 
   // Save the updated leaderboard back to the database
-  leaderboardDB.set("leaderboard", leaderboard);
+  setLeaderboard(channelId, leaderboard);
 
   // Refresh the leaderboard message
-  await this.refreshLeaderboardMessage(guild);
+  await this.refreshLeaderboardMessage(guild, channelId);
 };
 
-exports.refreshLeaderboardMessage = async (guild) => {
+exports.refreshLeaderboardMessage = async (guild, channelId) => {
   try {
     const leaderboardChannel = guild.channels.cache.find(
-      (channel) => channel.name === "leaderboard"
+      (channel) => channel.id === channelId
     );
 
     if (!leaderboardChannel) return;
 
     // Get the leaderboard from the database
-    const leaderboard = leaderboardDB.get("leaderboard") || {};
+    const leaderboard = getLeaderboard(channelId);
 
     const ratings = await this.calculateBradleyTerryRatings(leaderboard);
 
@@ -66,6 +62,7 @@ exports.refreshLeaderboardMessage = async (guild) => {
     // Fetch the last message in the leaderboard channel to update it
     const messages = await leaderboardChannel.messages.fetch({ limit: 1 });
     const leaderboardMsg = messages.first();
+    console.log(leaderboardMsg);
     if (leaderboardMsg) {
       await leaderboardMsg.edit(leaderboardMessage);
     } else {

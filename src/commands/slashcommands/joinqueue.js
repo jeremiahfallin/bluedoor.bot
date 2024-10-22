@@ -1,11 +1,13 @@
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
-
-// This would be better stored in a database
-let queue = [];
-const QUEUE_CHANNEL_ID = "YOUR_CHANNEL_ID_HERE";
+const {
+  getQueue,
+  addToQueue,
+  removeFromQueue,
+  getQueueChannels,
+} = require("../../utils/database");
 
 module.exports = {
-  __type__: 1, // This indicates it's an application (slash) command
+  __type__: 1,
   command: {
     name: "joinqueue",
     description: "Join the queue with one of your teams",
@@ -20,6 +22,13 @@ module.exports = {
     ],
   },
   run: async (client, interaction) => {
+    const queueChannels = getQueueChannels();
+    if (!queueChannels || !queueChannels[interaction.channelId]) {
+      return interaction.reply({
+        content: "This command can only be used in designated queue channels.",
+        ephemeral: true,
+      });
+    }
     const selectedTeamId = interaction.options.getString("team");
     const selectedTeamRole = interaction.guild.roles.cache.get(selectedTeamId);
 
@@ -38,18 +47,25 @@ module.exports = {
       });
     }
 
-    // Add the team to the queue
-    queue.push({ roleId: selectedTeamId, userId: interaction.user.id });
-
-    await interaction.reply({
-      content: `Your team "${selectedTeamRole.name}" has joined the queue!`,
-      ephemeral: true,
+    const added = addToQueue(interaction.channelId, {
+      roleId: selectedTeamId,
+      userId: interaction.user.id,
     });
+    if (!added) {
+      return interaction.reply({
+        content: "There was an error joining the queue. Please try again.",
+        ephemeral: true,
+      });
+    } else {
+      await interaction.reply({
+        content: `You have joined the queue!`,
+        ephemeral: true,
+      });
+    }
 
-    // Check if we can create a match
+    const queue = getQueue(interaction.channelId);
     if (queue.length >= 2) {
-      const team1 = queue.shift();
-      const team2 = queue.shift();
+      const [team1, team2] = removeFromQueue(interaction.channelId, 2);
       await createMatch(interaction, team1.roleId, team2.roleId);
     }
   },
